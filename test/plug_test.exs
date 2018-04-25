@@ -10,6 +10,7 @@ defmodule Post do
 
     field :user_id, :integer, default: 1
     field :slug, :string
+    field :account_id, :integer, default: 1
   end
 end
 
@@ -37,6 +38,7 @@ defmodule Repo do
 
   def get_by(Post, %{slug: "slug1"}), do: %Post{id: 1, slug: "slug1"}
   def get_by(Post, %{slug: "slug2"}), do: %Post{id: 2, slug: "slug2", user_id: 2}
+  def get_by(Post, %{slug: "slug", account_id: 1}), do: %Post{id: 1, slug: "slug", account_id: 1}
   def get_by(Post, %{slug: _}), do: nil
 end
 
@@ -195,6 +197,21 @@ defmodule PlugTest do
     params = %{"slug" => "slug1"}
     conn = conn(%Plug.Conn{private: %{phoenix_action: :show}}, :get, "/posts/slug1", params)
     expected = Plug.Conn.assign(conn, :post, %Post{id: 1, slug: "slug1"})
+
+    assert load_resource(conn, opts) == expected
+  end
+
+  test "it loads the resource correctly with opts[:implicit_fields] specified" do
+    opts = [model: Post, id_name: "slug", id_field: "slug", implicit_fields: [account_id: & &1.assigns.account_id]]
+
+    # when slug param is unique within a scope defined implicitely
+    params = %{"slug" => "slug"}
+
+    conn =
+      conn(%Plug.Conn{private: %{phoenix_action: :show}}, :get, "/posts/slug1", params)
+      |> Plug.Conn.assign(:account_id, 1)
+
+    expected = Plug.Conn.assign(conn, :post, %Post{id: 1, slug: "slug", account_id: 1})
 
     assert load_resource(conn, opts) == expected
   end

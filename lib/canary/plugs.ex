@@ -350,8 +350,12 @@ defmodule Canary.Plugs do
     repo = Application.get_env(:canary, :repo)
 
     field_name = Keyword.get(opts, :id_field, "id")
+    implicit_fields = Keyword.get(opts, :implicit_fields, [])
 
     get_map_args = %{String.to_atom(field_name) => get_resource_id(conn, opts)}
+    get_map_args = Enum.reduce(implicit_fields, get_map_args, fn {field, expr}, args ->
+      Map.put(args, field, expr.(conn))
+    end)
 
     case Map.fetch(conn.assigns, get_resource_name(conn, opts)) do
       :error ->
