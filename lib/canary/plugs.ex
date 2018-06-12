@@ -99,11 +99,21 @@ defmodule Canary.Plugs do
   defp do_load_resource(conn, opts) do
     action = get_action(conn)
     is_persisted = persisted?(opts)
+    non_id_actions =
+      if opts[:non_id_actions] do
+        Enum.concat([:index, :new, :create], opts[:non_id_actions])
+      else
+        [:index, :new, :create]
+      end
+
+    skip_load_non_id = opts[:skip_load_non_id_actions]
 
     loaded_resource =
       cond do
         is_persisted ->
           fetch_resource(conn, opts)
+        action in non_id_actions and skip_load_non_id ->
+          nil
         action == :index ->
           fetch_all(conn, opts)
         action in [:new, :create] ->
@@ -354,7 +364,11 @@ defmodule Canary.Plugs do
 
     get_map_args = %{String.to_atom(field_name) => get_resource_id(conn, opts)}
     get_map_args = Enum.reduce(implicit_fields, get_map_args, fn {field, expr}, args ->
-      Map.put(args, field, expr.(conn))
+      if is_function(expr) do
+        Map.put(args, field, expr.(conn))
+      else
+        Map.put(args, field, expr)
+      end
     end)
 
     case Map.fetch(conn.assigns, get_resource_name(conn, opts)) do
