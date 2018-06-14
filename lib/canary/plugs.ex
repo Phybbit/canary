@@ -364,10 +364,18 @@ defmodule Canary.Plugs do
 
     get_map_args = %{String.to_atom(field_name) => get_resource_id(conn, opts)}
     get_map_args = Enum.reduce(implicit_fields, get_map_args, fn {field, expr}, args ->
-      if is_function(expr) do
-        Map.put(args, field, expr.(conn))
-      else
-        Map.put(args, field, expr)
+      cond do
+        is_function(expr) ->
+          # add the result of the function
+          Map.put(args, field, expr.(conn))
+
+        is_atom(expr) ->
+          # interpret the atom as a given parameter in the conn
+          Map.put(args, expr, conn.params["#{expr}"])
+
+        true ->
+          # add the value as-is
+          Map.put(args, field, expr)
       end
     end)
 
