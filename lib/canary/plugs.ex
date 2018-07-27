@@ -407,7 +407,7 @@ defmodule Canary.Plugs do
   end
 
   defp fetch_all(conn, opts) do
-    repo = Application.get_env(:canary, :repo)
+    repo = Keyword.get(opts, :repo, Application.get_env(:canary, :repo))
 
     resource_name = get_resource_name(conn, opts)
 
